@@ -11,9 +11,21 @@ def get_firebase_data(mac_address, user, db):
     try:
         grill_temp = db.child(base_path).child("G4/4").get(user['idToken']).val()
         setpoint = db.child(base_path).child("G4/3").get(user['idToken']).val()
-        run_status = db.child(base_path).child("G4/1").get(user['idToken']).val()
+        
+        run_status_code_raw = db.child(base_path).child("G4/1").get(user['idToken']).val()
+        run_status_code = run_status_code_raw.strip() if isinstance(run_status_code_raw, str) else run_status_code_raw
+        logging.debug(f"Run Status Code (Processed): '{run_status_code}' (Length: {len(str(run_status_code))})")
+
         timeStamp = db.child(base_path).child("timeStamp").get(user['idToken']).val()
 
+        run_states = {
+            "0": "OFF AND COOL",
+            "1": "BURNING",
+            "2": "SHUTDOWN"
+        }
+
+        run_status = run_states.get(run_status_code, "UNKNOWN")
+        logging.debug(f"Final Run Status: {run_status}")
         logging.debug(f"Data fetched: Grill Temp: {grill_temp}, Setpoint: {setpoint}, Run Status: {run_status}, TimeStamp: {timeStamp}")
     except Exception as e:
         logging.error(f"Error fetching data: {e}")
@@ -25,6 +37,7 @@ def get_firebase_data(mac_address, user, db):
         "Run Status": run_status,
         "TimeStamp": timeStamp
     }
+
 
 class MyApp(QWidget):
     def __init__(self, mac_address, user, db):

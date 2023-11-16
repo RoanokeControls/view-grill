@@ -3,21 +3,18 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel
 import pyrebase
 import logging
 from PyQt5.QtCore import QTimer
+import argparse
 
 def get_firebase_data(mac_address, user, db):
     logging.debug(f"Fetching data for MAC address: {mac_address}")
     base_path = f"grills/{mac_address}/grill"
     try:
-        grill_temp = db.child(base_path).child("G4/6").get(user['idToken']).val()
-        logging.debug(f"Grill Temp: {grill_temp}")
-
-        setpoint = db.child(base_path).child("G4/4").get(user['idToken']).val()
-        logging.debug(f"Setpoint: {setpoint}")
-
+        grill_temp = db.child(base_path).child("G4/4").get(user['idToken']).val()
+        setpoint = db.child(base_path).child("G4/3").get(user['idToken']).val()
         run_status = db.child(base_path).child("G4/1").get(user['idToken']).val()
-        logging.debug(f"Run Status: {run_status}")
+        timeStamp = db.child(base_path).child("timeStamp").get(user['idToken']).val()
 
-        logging.debug(f"Data fetched: Grill Temp: {grill_temp}, Setpoint: {setpoint}, Run Status: {run_status}")
+        logging.debug(f"Data fetched: Grill Temp: {grill_temp}, Setpoint: {setpoint}, Run Status: {run_status}, TimeStamp: {timeStamp}")
     except Exception as e:
         logging.error(f"Error fetching data: {e}")
         return {}
@@ -25,7 +22,8 @@ def get_firebase_data(mac_address, user, db):
     return {
         "Grill Temp": grill_temp,
         "Setpoint": setpoint,
-        "Run Status": run_status
+        "Run Status": run_status,
+        "TimeStamp": timeStamp
     }
 
 class MyApp(QWidget):
@@ -50,6 +48,9 @@ class MyApp(QWidget):
         self.runStatusLabel = QLabel("Run Status: Loading...", self)
         self.layout.addWidget(self.runStatusLabel)
 
+        self.timeStampLabel = QLabel("TimeStamp: Loading...", self)
+        self.layout.addWidget(self.timeStampLabel)
+
         self.setLayout(self.layout)
         self.setWindowTitle('Grill Monitor')
         self.show()
@@ -64,16 +65,21 @@ class MyApp(QWidget):
         self.grillTempLabel.setText(f"Grill Temp: {data.get('Grill Temp', 'N/A')}")
         self.setpointLabel.setText(f"Setpoint: {data.get('Setpoint', 'N/A')}")
         self.runStatusLabel.setText(f"Run Status: {data.get('Run Status', 'N/A')}")
+        self.timeStampLabel.setText(f"TimeStamp: {data.get('TimeStamp', 'N/A')}")
 
 def main():
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-    logging.debug("Starting the application")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mac_address", help="MAC address of the device")
+    parser.add_argument("--debug", help="Enable debug mode", action="store_true")
+    args = parser.parse_args()
 
-    # Check for command line arguments
-    if len(sys.argv) < 2:
-        print("Usage: python view-grill.py <MAC_Address>")
-        sys.exit(1)
-    mac_address = sys.argv[1]
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    logging.debug("Starting the application")
+    mac_address = args.mac_address
 
     # Firebase configuration - replace with your details
     config = {
